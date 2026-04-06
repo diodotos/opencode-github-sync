@@ -46,7 +46,7 @@ function ensureSelectDependency() {
   if (fs.existsSync(selectDir)) return; // already installed
 
   console.log();
-    info("正在安装依赖...");
+    info("Installing dependencies...");
   try {
     execSync("npm install", {
       cwd: SCRIPTS_DIR,
@@ -55,7 +55,7 @@ function ensureSelectDependency() {
     });
     // no output, silent transition
   } catch (error) {
-    console.error(`${c.tn.red}❌ 安装 @inquirer/select 失败：${error.message}${c.reset}`);
+    console.error(`${c.tn.red}❌ Failed to install @inquirer/select: ${error.message}${c.reset}`);
     process.exit(1);
   }
 }
@@ -78,14 +78,14 @@ async function chooseTarget(action, force) {
   const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
   const menuItems = [
-    { name: `○ 仅配置`, value: "config", label: "仅配置" },
-    { name: `○ 仅会话`, value: "sessions", label: "仅会话" },
-    { name: `○ 全部`, value: "both", label: "全部" },
-    { name: `○ 退出`, value: "quit", label: "退出" },
+    { name: `○ Config only`, value: "config", label: "Config only" },
+    { name: `○ Sessions only`, value: "sessions", label: "Sessions only" },
+    { name: `○ Both`, value: "both", label: "Both" },
+    { name: `○ Quit`, value: "quit", label: "Quit" },
   ];
 
   const target = await select({
-    message: `${c.tn.cyan}?${R} 你想同步什么？`,
+    message: `${c.tn.cyan}?${R} What would you like to sync?`,
     choices: menuItems.map(item => ({ name: item.name, value: item.value })),
     theme: {
       prefix: "",
@@ -111,7 +111,7 @@ async function chooseTarget(action, force) {
         console.log(`    ${DIM}○ ${item.label}${R}`);
       }
     }
-    console.log(`  ${c.tn.gray}已取消${c.reset}`);
+    console.log(`  ${c.tn.gray}Cancelled${c.reset}`);
     process.exit(0);
   }
 
@@ -132,7 +132,7 @@ async function chooseTarget(action, force) {
 
 function runScript(scriptPath, args, label) {
   if (!fs.existsSync(scriptPath)) {
-    console.error(`${c.tn.red}❌ 脚本不存在：${scriptPath}${c.reset}`);
+    console.error(`${c.tn.red}❌ Script not found: ${scriptPath}${c.reset}`);
     process.exit(1);
   }
 
@@ -178,7 +178,7 @@ function runScript(scriptPath, args, label) {
         return;
       }
 
-      error(`${label}失败`);
+      error(`${label} failed`);
       if (stderr.trim()) console.log(stderr.trim());
       reject(new Error(`${label} exited with code ${code}`));
     });
@@ -189,14 +189,26 @@ function runConfigSync(action, force, target) {
   const args = [action];
   if (force) args.push("--force");
   if (target) args.push(`--target=${target}`, `--action=${action}`);
-  return runScript(SYNC_CONFIG_SCRIPT, args, action === "status" ? "正在检查配置状态..." : `正在 ${action === "push" ? "Push" : "Pull"} 配置...`);
+  return runScript(
+    SYNC_CONFIG_SCRIPT,
+    args,
+    action === "status"
+      ? "Checking config status..."
+      : `${action === "push" ? "Pushing" : "Pulling"} config...`,
+  );
 }
 
 function runSessionSync(action, force, target) {
   const args = [action];
   if (force) args.push("--force");
   if (target) args.push(`--target=${target}`, `--action=${action}`);
-  return runScript(SYNC_SESSIONS_SCRIPT, args, action === "status" ? "正在检查会话状态..." : `正在 ${action === "push" ? "Push" : "Pull"} 会话...`);
+  return runScript(
+    SYNC_SESSIONS_SCRIPT,
+    args,
+    action === "status"
+      ? "Checking session status..."
+      : `${action === "push" ? "Pushing" : "Pulling"} sessions...`,
+  );
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────
@@ -227,10 +239,10 @@ async function dispatch(action, target, force) {
 // ── Status ───────────────────────────────────────────────────────────
 
 function showStatus() {
-  title("📊 OpenCode Sync 状态");
-  section("⚙️  配置");
+  title("📊 OpenCode Sync Status");
+  section("⚙️  Config");
   return runConfigSync("status", false).then(() => {
-  section("💾 会话");
+  section("💾 Sessions");
   return runSessionSync("status", false);
   }).then(() => {
     console.log();
@@ -240,16 +252,16 @@ function showStatus() {
 // ── Help ─────────────────────────────────────────────────────────────
 
 function showHelp() {
-  title("❓ OpenCode Sync 帮助");
-  section("常用命令");
-  console.log(`    ${c.tn.cyan}opencode-push${c.reset}          交互式 Push`);
-  console.log(`    ${c.tn.cyan}opencode-pull${c.reset}          交互式 Pull`);
-  console.log(`    ${c.tn.cyan}opencode-push-force${c.reset}    强制 Push（覆盖远端）`);
-  console.log(`    ${c.tn.cyan}opencode-pull-force${c.reset}    强制 Pull（覆盖本地）`);
-  console.log(`    ${c.tn.cyan}opencode-push status${c.reset}   查看同步状态`);
+  title("❓ OpenCode Sync Help");
+  section("Common commands");
+  console.log(`    ${c.tn.cyan}opencode-push${c.reset}          Interactive push`);
+  console.log(`    ${c.tn.cyan}opencode-pull${c.reset}          Interactive pull`);
+  console.log(`    ${c.tn.cyan}opencode-push-force${c.reset}    Force push (overwrite remote)`);
+  console.log(`    ${c.tn.cyan}opencode-pull-force${c.reset}    Force pull (overwrite local)`);
+  console.log(`    ${c.tn.cyan}opencode-push status${c.reset}   Show sync status`);
   console.log();
-  section("说明");
-  note("会话数据需要在 OpenCode 外部同步，脚本会自动处理进程检查");
+  section("Notes");
+  note("Session data must be synced outside OpenCode; the script will handle process checks");
   console.log();
 }
 
@@ -285,9 +297,9 @@ async function main() {
 main().catch((e) => {
   if (e.name === "ExitPromptError") {
     // User pressed Ctrl+C during the select prompt
-    console.log(`\n${c.tn.gray}已取消${c.reset}`);
+    console.log(`\n${c.tn.gray}Cancelled${c.reset}`);
     process.exit(0);
   }
-  console.error(`${c.tn.red}发生意外错误：${e.message}${c.reset}`);
+  console.error(`${c.tn.red}Unexpected error: ${e.message}${c.reset}`);
   process.exit(1);
 });

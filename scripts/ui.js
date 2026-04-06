@@ -108,16 +108,16 @@ function separator() {
 
 function completionBanner(action, target) {
   separator();
-  const actionLabel = action === "push" ? "Push" : "Pull";
-  const targetLabel = target === "config" ? "配置文件" : target === "sessions" ? "会话数据" : "配置和会话";
-  console.log(`  \x1b[38;2;0;210;106m${c.bold}✨ 同步完成！${c.reset}  ${c.tn.slate}${targetLabel}已成功 ${actionLabel}${c.reset}`);
+  const actionVerb = action === "push" ? "pushed" : "pulled";
+  const targetLabel = target === "config" ? "Config" : target === "sessions" ? "Sessions" : "Config and sessions";
+  console.log(`  \x1b[38;2;0;210;106m${c.bold}✨ Sync complete!${c.reset}  ${c.tn.slate}${targetLabel} successfully ${actionVerb}${c.reset}`);
   console.log();
 }
 
 function upToDateBanner(action, target) {
   separator();
-  const targetLabel = target === "config" ? "配置文件" : target === "sessions" ? "会话数据" : "配置和会话";
-  console.log(`  \x1b[38;2;0;210;106m${c.bold}✨ 同步完成！${c.reset}  ${c.tn.slate}${targetLabel}已是最新${c.reset}`);
+  const targetLabel = target === "config" ? "Config" : target === "sessions" ? "Sessions" : "Config and sessions";
+  console.log(`  \x1b[38;2;0;210;106m${c.bold}✨ Sync complete!${c.reset}  ${c.tn.slate}${targetLabel} is already up to date${c.reset}`);
   console.log();
 }
 
@@ -132,7 +132,7 @@ function formatStats(added, modified, deleted, renamed) {
   if (renamed > 0) parts.push(`${c.tn.cyan}🔄${renamed}${c.reset}`);
 
   if (parts.length === 0) {
-    return `${c.tn.gray}已是最新${c.reset}`;
+    return `${c.tn.gray}Up to date${c.reset}`;
   }
 
   return parts.join(` ${c.tn.gray}│${c.reset} `);

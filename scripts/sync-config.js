@@ -431,7 +431,7 @@ function doPush(root, force, stageInFn, msgPrefix, action, target) {
   // ── Step 5: Check for changes
   const status = git("status --short", { cwd: root });
   if (!status.ok || !status.out) {
-    success("已是最新");
+    success("Up to date");
     upToDateBanner(action, target);
     return;
   }
@@ -444,7 +444,7 @@ function doPush(root, force, stageInFn, msgPrefix, action, target) {
   const totalChanges = added + modified + deleted + renamed;
 
   // Show staging result with stats
-  success(`正在从 4 个目录暂存文件...  ${formatStats(added, modified, deleted, renamed)}`);
+  success(`Staging files from 4 directories...  ${formatStats(added, modified, deleted, renamed)}`);
   // List changed files
   for (const line of lines) {
     const status_char = line.charAt(0);
@@ -457,10 +457,10 @@ function doPush(root, force, stageInFn, msgPrefix, action, target) {
   const msg = commitMessage(msgPrefix);
   const commitResult = git(`commit -m "${msg}"`, { cwd: root });
   if (!commitResult.ok) {
-    error(`Commit 失败：${(commitResult.err || commitResult.out).split("\n")[0]}`);
+    error(`Commit failed: ${(commitResult.err || commitResult.out).split("\n")[0]}`);
     process.exit(1);
   }
-  success(`已提交：${totalChanges} 个文件变更`);
+  success(`Committed: ${totalChanges} file changes`);
 
   // ── Step 7: Rebase + push
   const remoteRef = git(`rev-parse origin/${BRANCH}`, { cwd: root });
@@ -468,10 +468,10 @@ function doPush(root, force, stageInFn, msgPrefix, action, target) {
     // First push
     const pushResult = git(`push -u origin ${BRANCH}`, { cwd: root });
     if (pushResult.ok) {
-      success("已 Push 到 GitHub repo（首次 Push）");
+      success("Pushed to GitHub repo (first push)");
       completionBanner(action, target);
     } else {
-      error(`Push 失败：${(pushResult.err || "").split("\n")[0]}`);
+      error(`Push failed: ${(pushResult.err || "").split("\n")[0]}`);
       process.exit(1);
     }
     return;
@@ -482,10 +482,10 @@ function doPush(root, force, stageInFn, msgPrefix, action, target) {
   if (pullResult.ok) {
     const pushResult = git(`push origin ${BRANCH}`, { cwd: root });
     if (pushResult.ok) {
-      success("已 Push 到 GitHub repo（rebase，无冲突）");
+      success("Pushed to GitHub repo (rebase, no conflicts)");
       completionBanner(action, target);
     } else {
-      error(`Push 失败：${(pushResult.err || "").split("\n")[0]}`);
+      error(`Push failed: ${(pushResult.err || "").split("\n")[0]}`);
       process.exit(1);
     }
     return;
@@ -497,14 +497,14 @@ function doPush(root, force, stageInFn, msgPrefix, action, target) {
   if (force) {
     const fpResult = git(`push --force-with-lease origin ${BRANCH}`, { cwd: root });
     if (fpResult.ok) {
-      success("已强制 Push 到 GitHub repo（force-with-lease）");
+      success("Force-pushed to GitHub repo (force-with-lease)");
       completionBanner(action, target);
     } else {
-      error(`强制 Push 失败：${(fpResult.err || "").split("\n")[0]}`);
+      error(`Force push failed: ${(fpResult.err || "").split("\n")[0]}`);
       process.exit(1);
     }
   } else {
-    error("Rebase 冲突，请使用 --force 强制 Push");
+    error("Rebase conflict. Use --force to push anyway.");
     process.exit(1);
   }
 }
@@ -514,14 +514,14 @@ function doPull(root, force, stageOutFn, label, action, target) {
   if (!isGitRepo(root)) {
     const mode = initRepo(root);
     if (mode === "fresh") {
-      console.log(`${c.tn.gray}📭 GitHub repo 为空，请先在其他设备上 Push${c.reset}`);
+      console.log(`${c.tn.gray}📭 GitHub repo is empty. Push from another device first.${c.reset}`);
       return;
     }
     // mode === "fetched" — we already have the content
     const files = git("ls-files", { cwd: root });
     const count = files.ok ? files.out.split("\n").filter(Boolean).length : 0;
     stageOutFn(root);
-    success(`首次 Pull 完成：📄+${count}`);
+    success(`First pull complete: 📄+${count}`);
     completionBanner(action, target);
     return;
   }
@@ -548,18 +548,18 @@ function doPull(root, force, stageOutFn, label, action, target) {
       if (stashResult.ok) {
         didStash = true;
       } else {
-        error("Stash 失败：" + (stashResult.err || stashResult.out));
-        warn("请使用 --force 强制覆盖本地更改");
+        error("Stash failed: " + (stashResult.err || stashResult.out));
+        warn("Use --force to overwrite local changes");
         process.exit(1);
       }
     }
   }
 
   // ── Step 3: Fetch
-  success("正在从 GitHub Fetch...");
+  success("Fetching from GitHub...");
   const fetchResult = git(`fetch origin ${BRANCH}`, { cwd: root });
   if (!fetchResult.ok) {
-    error("Fetch 失败：" + fetchResult.err);
+    error("Fetch failed: " + fetchResult.err);
     process.exit(1);
   }
 
@@ -571,43 +571,43 @@ function doPull(root, force, stageOutFn, label, action, target) {
     const nameStatus = git(`diff --name-status HEAD origin/${BRANCH}`, { cwd: root });
     const resetResult = git(`reset --hard origin/${BRANCH}`, { cwd: root });
     if (!resetResult.ok) {
-      error("Reset 失败：" + resetResult.err);
+      error("Reset failed: " + resetResult.err);
       process.exit(1);
     }
 
     if (didStash) {
       const popResult = git("stash pop", { cwd: root });
       if (!popResult.ok) {
-        error("Stash 恢复冲突");
+        error("Stash pop conflict");
         console.error(`   cd "${root}"`);
         console.error("   git stash show → git checkout -- . → git stash drop");
-        console.error("   或使用: opencode-pull-force");
+        console.error("   Or use: opencode-pull-force");
         process.exit(1);
       }
     }
 
     stageOutFn(root);
     const stats = formatDiffStats(nameStatus.ok ? nameStatus.out : "");
-    success(`已从 GitHub Pull：${stats}`);
+    success(`Pulled from GitHub: ${stats}`);
     completionBanner(action, target);
   } else {
     if (didStash) {
       const popResult = git("stash pop", { cwd: root });
       if (!popResult.ok) {
-        error("Stash 恢复冲突");
+        error("Stash pop conflict");
         console.error(`   cd "${root}"`);
         console.error("   git stash show → git checkout -- . → git stash drop");
-        console.error("   或使用: opencode-pull-force");
+        console.error("   Or use: opencode-pull-force");
         process.exit(1);
       }
     }
 
-    success("已是最新");
+    success("Up to date");
     upToDateBanner(action, target);
   }
 
   if (label === "config") {
-    note("需要重启 OpenCode 生效");
+    note("Restart OpenCode to apply changes.");
   }
 }
 
@@ -619,7 +619,7 @@ function capitalize(s) {
 
 function cmdStatus(root) {
   if (!isGitRepo(root)) {
-    console.log(`${c.gray}📭 尚未初始化，请先执行 push 或 pull。${c.reset}`);
+    console.log(`${c.gray}📭 Not initialized yet. Run push or pull first.${c.reset}`);
     return;
   }
 
@@ -627,13 +627,13 @@ function cmdStatus(root) {
   const lastCommit = git("log --oneline -1", { cwd: root });
   const status = git("status --short", { cwd: root });
 
-  console.log(`${c.cyan}📦 上次同步${c.reset}  ${lastCommit.ok ? lastCommit.out : "暂无提交记录"}`);
+  console.log(`${c.cyan}📦 Last sync${c.reset}  ${lastCommit.ok ? lastCommit.out : "No commits yet"}`);
 
   if (status.ok && status.out) {
     const lines = status.out.split("\n");
-    console.log(`${c.yellow}📝 检测到 ${lines.length} 项本地改动${c.reset}`);
+    console.log(`${c.yellow}📝 Detected ${lines.length} local changes${c.reset}`);
   } else {
-    console.log(`${c.green}✅ 当前干净，没有本地改动${c.reset}`);
+    console.log(`${c.green}✅ Working tree clean. No local changes.${c.reset}`);
   }
 }
 
@@ -654,14 +654,14 @@ const target = (args.find(a => a.startsWith("--target=")) || "").replace("--targ
 const action = (args.find(a => a.startsWith("--action=")) || "").replace("--action=", "") || command;
 const root = getConfigRoot();
 
-if (!fs.existsSync(root)) {
-  if (command === "pull") {
-    fs.mkdirSync(root, { recursive: true });
-  } else {
-    console.error(`配置目录不存在：${root}`);
-    process.exit(1);
+  if (!fs.existsSync(root)) {
+    if (command === "pull") {
+      fs.mkdirSync(root, { recursive: true });
+    } else {
+      console.error(`Config directory not found: ${root}`);
+      process.exit(1);
+    }
   }
-}
 
 switch (command) {
   case "push":
@@ -674,18 +674,18 @@ switch (command) {
     cmdStatus(root);
     break;
   default:
-    console.log("用法：node sync-config.js <command> [--force]");
+    console.log("Usage: node sync-config.js <command> [--force]");
     console.log("");
-    console.log("命令：");
-    console.log("  push     Push 配置到 GitHub");
-    console.log("  pull     从 GitHub Pull 配置");
-    console.log("  status   查看同步状态和本地改动");
+    console.log("Commands:");
+    console.log("  push     Push config to GitHub");
+    console.log("  pull     Pull config from GitHub");
+    console.log("  status   Show sync status and local changes");
     console.log("");
-    console.log("选项：");
-    console.log("  --force   push: rebase 冲突时强制 Push");
-    console.log("            pull: 丢弃本地改动（默认自动 stash）");
+    console.log("Options:");
+    console.log("  --force   push: force push on rebase conflicts");
+    console.log("            pull: discard local changes (auto-stash by default)");
     console.log("");
-    console.log("同步目录：");
+    console.log("Sync directories:");
     console.log(`  config: ${getConfigRoot()}`);
     console.log(`  data:   ${getDataRoot()}`);
     console.log(`  state:  ${getStateRoot()}`);

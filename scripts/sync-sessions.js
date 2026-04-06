@@ -216,8 +216,8 @@ function ensureLfs(root) {
 
 function initRepo(root) {
   const remote = getRemoteUrl();
-  step(`正在初始化 git 仓库：${root}`);
-  step(`远端：${remote}`);
+  step(`Initializing git repo: ${root}`);
+  step(`Remote: ${remote}`);
 
   ensureFile(path.join(root, ".gitignore"), DEFAULT_GITIGNORE);
   ensureFile(path.join(root, ".gitattributes"), DEFAULT_GITATTRIBUTES);
@@ -238,7 +238,7 @@ function initRepo(root) {
   }
 
   if (!fetchResult.ok) {
-    warn(`Fetch 失败（${fetchResult.err || "未知错误"}），从空仓库开始`);
+    warn(`Fetch failed (${fetchResult.err || "unknown error"}); starting from an empty repo`);
   }
   return "fresh";
 }
@@ -313,11 +313,11 @@ async function ensureNoOpenCode() {
   for (let attempt = 1; attempt <= MAX_KILL_RETRIES; attempt++) {
     const pids = findOpenCodePids();
     if (pids.length === 0) {
-      if (attempt > 1) note("所有后台进程已关闭 (Processes terminated)");
+      if (attempt > 1) note("All background processes closed (processes terminated)");
       return true;
     }
 
-    warn(`发现 ${pids.length} 个运行中的 OpenCode 进程，正在尝试关闭... (${attempt}/${MAX_KILL_RETRIES})`);
+    warn(`Found ${pids.length} running OpenCode processes, attempting to close... (${attempt}/${MAX_KILL_RETRIES})`);
     killPids(pids);
 
     // Wait for processes to die
@@ -579,7 +579,7 @@ function doPush(root, force, action, target) {
 
   const status = git("status --short", { cwd: root });
   if (!status.ok || !status.out) {
-    success("已是最新");
+    success("Up to date");
     upToDateBanner(action, target);
     return;
   }
@@ -594,7 +594,7 @@ function doPush(root, force, action, target) {
   const totalChanges = added + modified + deleted + renamed;
 
   // Show staging result with stats
-  success(`正在从数据目录暂存文件...  ${formatStats(added, modified, deleted, renamed)}`);
+  success(`Staging files from data directory...  ${formatStats(added, modified, deleted, renamed)}`);
   // List changed files
   for (const line of lines) {
     const status_char = line.charAt(0);
@@ -606,10 +606,10 @@ function doPush(root, force, action, target) {
   const msg = commitMessage();
   const commitResult = git(`commit -m "${msg}"`, { cwd: root });
   if (!commitResult.ok) {
-    error(`Commit 失败：${(commitResult.err || commitResult.out).split("\n")[0]}`);
+    error(`Commit failed: ${(commitResult.err || commitResult.out).split("\n")[0]}`);
     process.exit(1);
   }
-  success(`已提交：${totalChanges} 个文件变更`);
+  success(`Committed: ${totalChanges} file changes`);
 
   // Rebase + push
   const remoteRef = git(`rev-parse origin/${BRANCH}`, { cwd: root });
@@ -617,10 +617,10 @@ function doPush(root, force, action, target) {
     // First push
     const pushResult = git(`push -u origin ${BRANCH}`, { cwd: root });
     if (pushResult.ok) {
-      success("已 Push 到 GitHub repo（首次 Push）");
+      success("Pushed to GitHub repo (first push)");
       completionBanner(action, target);
     } else {
-      error(`Push 失败：${(pushResult.err || "").split("\n")[0]}`);
+      error(`Push failed: ${(pushResult.err || "").split("\n")[0]}`);
       process.exit(1);
     }
     return;
@@ -631,10 +631,10 @@ function doPush(root, force, action, target) {
   if (pullResult.ok) {
     const pushResult = git(`push origin ${BRANCH}`, { cwd: root });
     if (pushResult.ok) {
-      success("已 Push 到 GitHub repo（rebase，无冲突）");
+      success("Pushed to GitHub repo (rebase, no conflicts)");
       completionBanner(action, target);
     } else {
-      error(`Push 失败：${(pushResult.err || "").split("\n")[0]}`);
+      error(`Push failed: ${(pushResult.err || "").split("\n")[0]}`);
       process.exit(1);
     }
     return;
@@ -648,14 +648,14 @@ function doPush(root, force, action, target) {
       cwd: root,
     });
     if (fpResult.ok) {
-      success("已强制 Push 到 GitHub repo（force-with-lease）");
+      success("Force-pushed to GitHub repo (force-with-lease)");
       completionBanner(action, target);
     } else {
-      error(`强制 Push 失败：${(fpResult.err || "").split("\n")[0]}`);
+      error(`Force push failed: ${(fpResult.err || "").split("\n")[0]}`);
       process.exit(1);
     }
   } else {
-    error("Rebase 冲突，请使用 --force 强制 Push");
+    error("Rebase conflict. Use --force to push anyway.");
     process.exit(1);
   }
 }
@@ -664,13 +664,13 @@ function doPull(root, force, action, target) {
   if (!isGitRepo(root)) {
     const mode = initRepo(root);
     if (mode === "fresh") {
-      console.log(`  ${c.tn.gray}📭 GitHub repo 为空，请先在其他设备上 Push${c.reset}`);
+      console.log(`  ${c.tn.gray}📭 GitHub repo is empty. Push from another device first.${c.reset}`);
       return;
     }
     const files = git("ls-files", { cwd: root });
     const count = files.ok ? files.out.split("\n").filter(Boolean).length : 0;
     stageSessionDataOut(root);
-    success(`首次 Pull 完成：📄+${count}`);
+    success(`First pull complete: 📄+${count}`);
     completionBanner(action, target);
     return;
   }
@@ -698,18 +698,18 @@ function doPull(root, force, action, target) {
       if (stashResult.ok) {
         didStash = true;
       } else {
-        error(`Stash 失败：${stashResult.err || stashResult.out}`);
-        console.error("   请使用 --force 强制覆盖本地更改");
+        error(`Stash failed: ${stashResult.err || stashResult.out}`);
+        console.error("   Use --force to overwrite local changes");
         process.exit(1);
       }
     }
   }
 
   // Fetch
-  success("正在从 GitHub Fetch...");
+  success("Fetching from GitHub...");
   const fetchResult = git(`fetch origin ${BRANCH}`, { cwd: root });
   if (!fetchResult.ok) {
-    error(`Fetch 失败：${fetchResult.err}`);
+    error(`Fetch failed: ${fetchResult.err}`);
     process.exit(1);
   }
 
@@ -722,52 +722,52 @@ function doPull(root, force, action, target) {
     });
     const resetResult = git(`reset --hard origin/${BRANCH}`, { cwd: root });
     if (!resetResult.ok) {
-      error(`Reset 失败：${resetResult.err}`);
+      error(`Reset failed: ${resetResult.err}`);
       process.exit(1);
     }
 
     if (didStash) {
       const popResult = git("stash pop", { cwd: root });
       if (!popResult.ok) {
-        error("Stash 恢复冲突");
-        console.error("   手动处理：");
+        error("Stash pop conflict");
+        console.error("   Manual resolution:");
         console.error(`     cd "${root}"`);
-        console.error("     git stash show          # 查看暂存内容");
-        console.error("     git checkout -- .        # 丢弃冲突标记");
-        console.error("     git stash drop           # 丢弃暂存");
-        console.error("   或使用：opencode-pull-force");
+        console.error("     git stash show          # review stashed changes");
+        console.error("     git checkout -- .        # discard conflict markers");
+        console.error("     git stash drop           # drop the stash");
+        console.error("   Or use: opencode-pull-force");
         process.exit(1);
       }
     }
 
     stageSessionDataOut(root);
     const stats = formatDiffStats(nameStatus.ok ? nameStatus.out : "");
-    success(`已从 GitHub Pull：${stats}`);
+    success(`Pulled from GitHub: ${stats}`);
     completionBanner(action, target);
   } else {
     if (didStash) {
       const popResult = git("stash pop", { cwd: root });
       if (!popResult.ok) {
-        error("Stash 恢复冲突");
-        console.error("   手动处理：");
+        error("Stash pop conflict");
+        console.error("   Manual resolution:");
         console.error(`     cd "${root}"`);
-        console.error("     git stash show          # 查看暂存内容");
-        console.error("     git checkout -- .        # 丢弃冲突标记");
-        console.error("     git stash drop           # 丢弃暂存");
-        console.error("   或使用：opencode-pull-force");
+        console.error("     git stash show          # review stashed changes");
+        console.error("     git checkout -- .        # discard conflict markers");
+        console.error("     git stash drop           # drop the stash");
+        console.error("   Or use: opencode-pull-force");
         process.exit(1);
       }
     }
 
-    success("已是最新");
+    success("Up to date");
     upToDateBanner(action, target);
   }
 }
 
 function cmdStatus(root) {
   if (!isGitRepo(root)) {
-    console.log(`${c.gray}📭 尚未初始化：${root}${c.reset}`);
-    console.log(`${c.gray}请先执行 Push 或 Pull${c.reset}`);
+    console.log(`${c.gray}📭 Not initialized: ${root}${c.reset}`);
+    console.log(`${c.gray}Run push or pull first${c.reset}`);
     return;
   }
 
@@ -778,8 +778,8 @@ function cmdStatus(root) {
     ? `${(fs.statSync(dbPath).size / 1024 / 1024).toFixed(1)} MB`
     : "n/a";
 
-  console.log(`${c.cyan}💾 上次同步${c.reset}  ${lastCommit.ok ? lastCommit.out : "暂无提交记录"}`);
-  console.log(`${c.gray}数据库大小${c.reset}  ${dbSize}`);
+  console.log(`${c.cyan}💾 Last sync${c.reset}  ${lastCommit.ok ? lastCommit.out : "No commits yet"}`);
+  console.log(`${c.gray}Database size${c.reset}  ${dbSize}`);
 
   // Migration info
   const localRows = getMigrationRows(dbPath);
@@ -793,22 +793,22 @@ function cmdStatus(root) {
   const remoteLabel =
     remoteMeta && remoteMeta.migrations
       ? `${remoteMeta.migrations.length} (${remoteMeta.hostname})`
-      : "无记录";
-  console.log(`${c.gray}迁移记录${c.reset}  本地 ${localLabel} / GitHub ${remoteLabel}`);
+      : "no records";
+  console.log(`${c.gray}Migration records${c.reset}  local ${localLabel} / GitHub ${remoteLabel}`);
   if (
     remoteMeta &&
     remoteMeta.migrations &&
     localRows.length > remoteMeta.migrations.length
   ) {
-    info("GitHub repo 迁移记录更少，Pull 时会自动回补本地记录");
+    info("GitHub repo has fewer migration records; pull will restore missing local records");
   }
 
   // Show opencode processes
   const pids = findOpenCodePids();
   if (pids.length > 0) {
-    warn(`检测到 OpenCode 正在运行（PID: ${pids.join(", ")}）`);
+    warn(`Detected running OpenCode (PID: ${pids.join(", ")})`);
   } else {
-    success("当前干净，没有正在运行的 OpenCode 进程");
+    success("Clean: no running OpenCode processes");
   }
 }
 
@@ -823,9 +823,9 @@ async function main() {
   const action = (args.find(a => a.startsWith("--action=")) || "").replace("--action=", "") || command;
 
   if (!command || command === "help") {
-    console.log("sync-sessions.js — 同步 OpenCode 会话数据到 GitHub\n");
-    console.log("⚠️ 必须在 OpenCode 外部运行（脚本会终止相关进程）。\n");
-    console.log("用法：node sync-sessions.js <push|pull|status> [--force]");
+    console.log("sync-sessions.js — Sync OpenCode session data to GitHub\n");
+    console.log("⚠️ Must be run outside OpenCode (the script will terminate related processes).\n");
+    console.log("Usage: node sync-sessions.js <push|pull|status> [--force]");
     return;
   }
 
@@ -833,7 +833,7 @@ async function main() {
     if (command === "pull") {
       fs.mkdirSync(root, { recursive: true });
     } else {
-      console.error(`配置目录不存在：${root}`);
+      console.error(`Config directory not found: ${root}`);
       process.exit(1);
     }
   }
@@ -855,8 +855,8 @@ async function main() {
       cmdStatus(root);
       break;
     default:
-      console.error(`未知命令：${command}`);
-      console.error("可用命令：push, pull, status");
+      console.error(`Unknown command: ${command}`);
+      console.error("Available commands: push, pull, status");
       process.exit(1);
   }
 }

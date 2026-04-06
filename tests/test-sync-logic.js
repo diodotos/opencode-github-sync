@@ -121,10 +121,10 @@ function testConfigPushWithChanges() {
 
   const out = stripAnsi(r.stdout);
   assert(r.code === 0, "exit code 0", `got ${r.code}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`);
-  assert(out.includes("已提交"), "shows commit message");
-  assert(out.includes("已 Push"), "shows push success");
-  assert(out.includes("同步完成"), "shows completionBanner");
-  assert(!out.includes("已是最新"), "does NOT show up-to-date");
+  assert(out.includes("Committed:"), "shows commit message");
+  assert(out.includes("Pushed to GitHub repo"), "shows push success");
+  assert(out.includes("Sync complete!"), "shows completionBanner");
+  assert(!out.includes("Up to date"), "does NOT show up-to-date");
 }
 
 function testConfigPushNoChanges() {
@@ -153,9 +153,9 @@ function testConfigPushNoChanges() {
   const out = stripAnsi(r.stdout);
 
   assert(r.code === 0, "exit code 0", `got ${r.code}`);
-  assert(out.includes("已是最新"), "shows up-to-date");
-  assert(out.includes("同步完成"), "shows upToDateBanner");
-  assert(!out.includes("已提交"), "does NOT show commit");
+  assert(out.includes("Up to date"), "shows up-to-date");
+  assert(out.includes("Sync complete!"), "shows upToDateBanner");
+  assert(!out.includes("Committed:"), "does NOT show commit");
 }
 
 function testConfigPullWithChanges() {
@@ -195,8 +195,8 @@ function testConfigPullWithChanges() {
 
   const out = stripAnsi(r.stdout);
   assert(r.code === 0, "exit code 0", `got ${r.code}\nstdout: ${stripAnsi(r.stdout)}\nstderr: ${r.stderr}`);
-  assert(out.includes("Pull 完成") || out.includes("已从 GitHub Pull"), "shows pull success");
-  assert(out.includes("同步完成"), "shows completionBanner");
+  assert(out.includes("First pull complete") || out.includes("Pulled from GitHub"), "shows pull success");
+  assert(out.includes("Sync complete!"), "shows completionBanner");
   // Verify stageOut restored state files
   assert(fs.existsSync(path.join(stateB, "kv.json")), "state file restored");
 }
@@ -232,7 +232,7 @@ function testConfigPullNoChanges_DoesNotDeleteLocalFiles() {
   const out = stripAnsi(r.stdout);
 
   assert(r.code === 0, "exit code 0", `got ${r.code}`);
-  assert(out.includes("已是最新"), "shows up-to-date");
+  assert(out.includes("Up to date"), "shows up-to-date");
   // THE CRITICAL CHECK: new-local.json must still exist
   assert(
     fs.existsSync(path.join(stateRoot, "new-local.json")),
@@ -307,8 +307,8 @@ function testSessionsPushWithChanges() {
 
   const out = stripAnsi(r.stdout);
   assert(r.code === 0, "exit code 0", `got ${r.code}\nstdout: ${stripAnsi(r.stdout)}\nstderr: ${r.stderr}`);
-  assert(out.includes("已 Push") || out.includes("已提交"), "shows push/commit success");
-  assert(out.includes("同步完成"), "shows completionBanner");
+  assert(out.includes("Pushed to GitHub repo") || out.includes("Committed:"), "shows push/commit success");
+  assert(out.includes("Sync complete!"), "shows completionBanner");
 }
 
 function testSessionsPushNoChanges() {
@@ -335,9 +335,9 @@ function testSessionsPushNoChanges() {
   const out = stripAnsi(r.stdout);
 
   assert(r.code === 0, "exit code 0", `got ${r.code}\nstdout: ${stripAnsi(r.stdout)}\nstderr: ${r.stderr}`);
-  assert(out.includes("已是最新"), "shows up-to-date");
-  assert(out.includes("同步完成"), "shows upToDateBanner");
-  assert(!out.includes("已提交"), "does NOT show commit");
+  assert(out.includes("Up to date"), "shows up-to-date");
+  assert(out.includes("Sync complete!"), "shows upToDateBanner");
+  assert(!out.includes("Committed:"), "does NOT show commit");
 }
 
 function testSessionsPullNoChanges_DoesNotDeleteLocalFiles() {
@@ -370,7 +370,7 @@ function testSessionsPullNoChanges_DoesNotDeleteLocalFiles() {
   const out = stripAnsi(r.stdout);
 
   assert(r.code === 0, "exit code 0", `got ${r.code}`);
-  assert(out.includes("已是最新"), "shows up-to-date");
+  assert(out.includes("Up to date"), "shows up-to-date");
   assert(
     fs.existsSync(path.join(storageDir, "brand-new-session.json")),
     "BUG1 FIX: new session file NOT deleted",
@@ -403,7 +403,7 @@ function testBannerTargetLabels() {
 
   const out = stripAnsi(r.stdout);
   assert(r.code === 0, "exit code 0", `got ${r.code}`);
-  assert(out.includes("配置和会话"), "banner shows '配置和会话' for target=both");
+  assert(out.includes("Config and sessions"), "banner shows 'Config and sessions' for target=both");
 }
 
 function testDispatchNoDoubleBanner() {
