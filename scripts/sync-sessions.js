@@ -150,14 +150,17 @@ function timestamp() {
   return new Date().toISOString().replace(/T/, " ").replace(/\..+/, "");
 }
 
+function getPlatformName() {
+  return process.platform === "win32"
+    ? "windows"
+    : process.platform === "darwin"
+      ? "mac"
+      : process.platform;
+}
+
 function commitMessage(prefix = "sessions") {
   const host = os.hostname();
-  const plat =
-    process.platform === "win32"
-      ? "windows"
-      : process.platform === "darwin"
-        ? "mac"
-        : process.platform;
+  const plat = getPlatformName();
   return `${prefix}: ${timestamp()} from ${host} (${plat})`;
 }
 
@@ -383,6 +386,7 @@ function verifySqlite(dbPath) {
 // migrations as "already applied" and skips them.
 
 const DB_META_FILE = "db-meta.json";
+const SESSION_ORIGIN_FILE = "session-origin.json";
 
 /**
  * Read all rows from __drizzle_migrations as an array of objects.
@@ -393,6 +397,22 @@ function getMigrationRows(dbPath) {
   try {
     const raw = execSync(
       `sqlite3 -json "${dbPath}" "SELECT hash, created_at, name, applied_at FROM __drizzle_migrations;"`,
+      { encoding: "utf8", stdio: "pipe" },
+    ).trim();
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Read session rows for origin mapping.
+ */
+function getSessionRows(dbPath) {
+  if (!fs.existsSync(dbPath)) return [];
+  try {
+    const raw = execSync(
+      `sqlite3 -json "${dbPath}" "SELECT id, time_created, time_updated FROM session;"`,
       { encoding: "utf8", stdio: "pipe" },
     ).trim();
     return raw ? JSON.parse(raw) : [];
@@ -416,6 +436,47 @@ function writeMigrationMeta(repoData, srcDbPath) {
     JSON.stringify(meta, null, 2) + "\n",
   );
   return meta;
+}
+
+/**
+ * Write per-session origin metadata for cross-machine attribution.
+ */
+function writeSessionOriginMeta(repoData, srcDbPath) {
+  const sessions = getSessionRows(srcDbPath);
+  const generatedAt = new Date().toISOString();
+  const host = os.hostname();
+  const platform = getPlatformName();
+  const map = {};
+
+  for (const row of sessions) {
+    if (!row || !row.id) continue;
+    const updatedAtMs =
+      row.time_updated !== null && row.time_updated !== undefined
+        ? row.time_updated
+        : row.time_created !== null && row.time_created !== undefined
+          ? row.time_created
+          : null;
+    map[row.id] = {
+      host,
+      platform,
+      updatedAtMs,
+      pushedAt: generatedAt,
+    };
+  }
+
+  const payload = {
+    schemaVersion: 1,
+    generatedAt,
+    host,
+    platform,
+    sessions: map,
+  };
+
+  fs.writeFileSync(
+    path.join(repoData, SESSION_ORIGIN_FILE),
+    JSON.stringify(payload, null, 2) + "\n",
+  );
+  return payload;
 }
 
 /**
@@ -508,6 +569,7 @@ function stageSessionDataIn(root) {
   const srcDbPath = path.join(dataRoot, "opencode.db");
   if (fs.existsSync(srcDbPath)) {
     writeMigrationMeta(repoData, srcDbPath);
+    writeSessionOriginMeta(repoData, srcDbPath);
   }
 
   if (fileCount > 0) {

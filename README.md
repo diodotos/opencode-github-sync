@@ -125,6 +125,31 @@ opencode-pull-force    # Force pull (discard local)
 - Git repo auto-initializes on first push/pull
 - `.gitignore` and `.gitattributes` are auto-generated
 
+## Session Origin Metadata
+
+When you push sessions, the sync writes `_data/session-origin.json` with per-session
+machine attribution. This helps external tools identify which host last touched a
+session without changing OpenCode's SQLite schema.
+
+File shape:
+
+```json
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-07T18:12:34.567Z",
+  "host": "fyzet",
+  "platform": "linux",
+  "sessions": {
+    "ses_abc123": {
+      "host": "fyzet",
+      "platform": "linux",
+      "updatedAtMs": 1775584707530,
+      "pushedAt": "2026-04-07T18:12:34.567Z"
+    }
+  }
+}
+```
+
 ## Environment Variables
 
 | Variable | Required | Description |
