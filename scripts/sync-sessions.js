@@ -421,6 +421,57 @@ function getSessionRows(dbPath) {
   }
 }
 
+function readSessionOriginMeta(repoData) {
+  const originPath = path.join(repoData, SESSION_ORIGIN_FILE);
+  if (!fs.existsSync(originPath)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(originPath, "utf8"));
+    if (!data || typeof data !== "object") return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function coerceOriginString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function coerceOriginNumber(value) {
+  return Number.isFinite(value) ? value : null;
+}
+
+function mergeSessionOriginEntry(existing, newUpdatedAtMs, host, platform, generatedAt) {
+  const existingHost = coerceOriginString(existing && existing.host);
+  const existingPlatform = coerceOriginString(existing && existing.platform);
+  const existingUpdatedAtMs = coerceOriginNumber(existing && existing.updatedAtMs);
+  const nextUpdatedAtMs = coerceOriginNumber(newUpdatedAtMs);
+
+  const keepExisting =
+    existingHost &&
+    (existingUpdatedAtMs === null ||
+      nextUpdatedAtMs === null ||
+      nextUpdatedAtMs <= existingUpdatedAtMs);
+
+  if (keepExisting) {
+    return {
+      host: existingHost,
+      platform: existingPlatform,
+      updatedAtMs:
+        existingUpdatedAtMs !== null ? existingUpdatedAtMs : nextUpdatedAtMs,
+      pushedAt: (existing && existing.pushedAt) || generatedAt,
+    };
+  }
+
+  return {
+    host,
+    platform,
+    updatedAtMs:
+      nextUpdatedAtMs !== null ? nextUpdatedAtMs : existingUpdatedAtMs,
+    pushedAt: generatedAt,
+  };
+}
+
 /**
  * Write db-meta.json with the full migration table for pull-side repair.
  */
@@ -446,6 +497,9 @@ function writeSessionOriginMeta(repoData, srcDbPath) {
   const generatedAt = new Date().toISOString();
   const host = os.hostname();
   const platform = getPlatformName();
+  const existing = readSessionOriginMeta(repoData);
+  const existingSessions =
+    existing && typeof existing.sessions === "object" ? existing.sessions : {};
   const map = {};
 
   for (const row of sessions) {
@@ -456,12 +510,14 @@ function writeSessionOriginMeta(repoData, srcDbPath) {
         : row.time_created !== null && row.time_created !== undefined
           ? row.time_created
           : null;
-    map[row.id] = {
+    const existingEntry = existingSessions[row.id];
+    map[row.id] = mergeSessionOriginEntry(
+      existingEntry,
+      updatedAtMs,
       host,
       platform,
-      updatedAtMs,
-      pushedAt: generatedAt,
-    };
+      generatedAt,
+    );
   }
 
   const payload = {
